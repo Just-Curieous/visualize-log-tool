@@ -11,28 +11,32 @@ const AgentTimeline = () => {
   const parseLogContent = (content) => {
     // Parse the log systematically
     const lines = content.split('\n');
+    console.log('Number of lines in log:', lines.length);
     const events = [];
     
     let currentGlobalStep = null;
     let currentTimestamp = null;
     
     lines.forEach((line, index) => {
-      // Extract timestamp from line
-      const tsMatch = line.match(/2025-05-19 (\d{2}:\d{2}:\d{2})/);
+      // Extract timestamp from line - updated to match your log format
+      const tsMatch = line.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
       if (tsMatch) {
         currentTimestamp = tsMatch[1];
+        console.log('Found timestamp:', currentTimestamp); // Debug log
       }
       
-      // Extract global step
-      const globalStepMatch = line.match(/============================ Global Step (\d+) ============================/);
+      // Extract global step - updated to match your log format
+      const globalStepMatch = line.match(/Global Step (\d+)/);
       if (globalStepMatch) {
         currentGlobalStep = parseInt(globalStepMatch[1]);
+        console.log('Found global step:', currentGlobalStep); // Debug log
       }
       
-      // Extract agent activity
+      // Extract agent activity - updated to match your log format
       const agentMatch = line.match(/<><><><><> ([^<]+) <><><><><>/);
       if (agentMatch) {
         const agentName = agentMatch[1].trim();
+        console.log('Found agent activity:', { agentName, timestamp: currentTimestamp, globalStep: currentGlobalStep });
         
         // Look for tool calls in the next few lines
         let toolCall = null;
@@ -42,33 +46,37 @@ const AgentTimeline = () => {
           if (index + i < lines.length) {
             const nextLine = lines[index + i];
             
-            // Check for tool calls
-            const toolMatch = nextLine.match(/Tool calls: ([^\n]+)/);
+            // Check for tool calls - updated to match your log format
+            const toolMatch = nextLine.match(/Tool calls?: ([^\n]+)/);
             if (toolMatch && !toolCall) {
               toolCall = toolMatch[1];
             }
             
-            // Check for messages or concise responses
-            const messageMatch = nextLine.match(/Message: (.+)/) || nextLine.match(/Concise response: (.+)/);
+            // Check for messages or concise responses - updated to match your log format
+            const messageMatch = nextLine.match(/Message: (.+)/) || 
+                               nextLine.match(/Concise response: (.+)/);
             if (messageMatch && !message) {
               message = messageMatch[1].substring(0, 100) + (messageMatch[1].length > 100 ? '...' : '');
             }
             
-            // Stop if we hit another agent
-            if (nextLine.includes('<><><><><>')) {
+            // Stop if we hit another agent or timestamp
+            if (nextLine.includes('<><><><><>') || nextLine.match(/\[38;5;240m\d{4}-\d{2}-\d{2}/)) {
               break;
             }
           }
         }
         
-        events.push({
-          timestamp: currentTimestamp,
-          globalStep: currentGlobalStep,
-          agent: agentName,
-          toolCall: toolCall,
-          message: message,
-          lineNumber: index
-        });
+        // Only add the event if we have a valid timestamp
+        if (currentTimestamp) {
+          events.push({
+            timestamp: currentTimestamp,
+            globalStep: currentGlobalStep,
+            agent: agentName,
+            toolCall: toolCall,
+            message: message,
+            lineNumber: index
+          });
+        }
       }
     });
     
@@ -77,9 +85,12 @@ const AgentTimeline = () => {
       .filter(event => event.timestamp)
       .map(event => ({
         ...event,
-        date: new Date(`2025-05-19T${event.timestamp}`)
+        date: new Date(event.timestamp.replace(' ', 'T'))
       }))
       .sort((a, b) => a.date - b.date);
+
+    console.log('Number of valid events:', validEvents.length);
+    console.log('Sample valid event:', validEvents[0]);
 
     // Calculate activity durations
     const processedActivities = [];
@@ -110,6 +121,10 @@ const AgentTimeline = () => {
     const totalDur = processedActivities.length > 0 
       ? Math.max(...processedActivities.map(a => a.endMinutes))
       : 0;
+    
+    console.log('Final processed activities:', processedActivities);
+    console.log('Total duration:', totalDur);
+    console.log('Number of activities:', processedActivities.length);
     
     setActivities(processedActivities);
     setTotalDuration(totalDur);
@@ -145,6 +160,7 @@ const AgentTimeline = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target.result;
+        console.log('File content loaded:', content.substring(0, 200) + '...'); // Log first 200 chars
         setFileContent(content);
         parseLogContent(content);
       };
