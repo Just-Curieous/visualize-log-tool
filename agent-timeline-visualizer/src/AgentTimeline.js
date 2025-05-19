@@ -172,7 +172,9 @@ const AgentTimeline = () => {
     '👑 SUPERVISOR 👑': '#FF6B6B',
     '👷 CONTROL_WORKER_0 👷': '#4ECDC4',
     '✅ LLM_VERIFIER ✅': '#45B7D1',
-    '✅ ANALYZER ✅': '#96CEB4'
+    '✅ PATCH_VERIFIER ✅': '#95B7D2',
+    '✅ ANALYZER ✅': '#96CEB4',
+    '✅ CONCLUDER ✅': '#971113'
   };
 
   const agentList = [...new Set(activities.map(a => a.agent))];
